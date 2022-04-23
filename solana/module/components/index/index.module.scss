@@ -1,0 +1,64 @@
+.Index {
+  width: 80%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+
+  .wallet {
+    font-weight: bold;
+    font-size: 20px;
+    text-align: right;
+  }
+
+  .gap {
+    padding: 5px;
+  }
+
+  .connect_button {
+    width: 100%;
+    border-radius: 5px;
+    text-align: center;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    button, div {
+      display: flex;
+      justify-content: center;
+      width: 100%;
+      flex: 1;
+    }
+  }
+
+  .button {
+    box-sizing: border-box;
+    border-radius: 5px;
+    background-color: rgba(81,45,168, 1);
+    padding: 15px 10px;
+    color: white;
+    text-align: center;
+    font-weight: bold;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    &:hover {
+      background-color: #1a1f2e;
+    }
+    &:disabled {
+      background-color: gray;
+      cursor: no-drop;
+    }
+  }
+
+  .input {
+    // color: white;
+    // background-color: rgba(81,45,168, 1);
+    border-radius: 5px;
+    padding: 15px 10px;
+    font-weight: bold;
+    outline: none;
+    font-size: 20px;
+    box-sizing: border-box;
+    text-align: right;
+  }
+}
