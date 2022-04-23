@@ -5,7 +5,7 @@ import { WalletDisconnectButton, WalletMultiButton } from '@solana/wallet-adapte
 import { WalletNotConnectedError } from '@solana/wallet-adapter-base'
 import { useConnection, useWallet } from '@solana/wallet-adapter-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { AccountInfo, Keypair, PublicKey, SystemProgram, Transaction, Connection, clusterApiUrl, TransactionInstruction, AccountMeta } from '@solana/web3.js'
+import { AccountInfo, Keypair, PublicKey, SystemProgram, Transaction, Connection, clusterApiUrl, TransactionInstruction, AccountMeta, sendAndConfirmTransaction } from '@solana/web3.js'
 import { createInitializeMintInstruction, getMinimumBalanceForRentExemptMint, MINT_SIZE, TOKEN_PROGRAM_ID, getAccount, createMintToInstruction, mintToInstructionData, TokenInstruction, createMint, getMint, Mint, mintTo, getOrCreateAssociatedTokenAccount, transfer } from '@solana/spl-token'
 
 interface StateI {
@@ -20,7 +20,7 @@ interface StateI {
 
 export const Index = () => {
   const connection = useMemo(() => new Connection(clusterApiUrl('testnet'), 'confirmed'), []);
-  const { publicKey, sendTransaction } = useWallet();
+  const { publicKey, sendTransaction, signTransaction } = useWallet();
   const [state, setState] = useState<StateI>({
     receiver: 'DYVrQ1W2L1njN9irucgZjW95BXPGbiuXw217JpUUsAiY',
     balance: 0,
@@ -85,17 +85,17 @@ export const Index = () => {
   }
 
   const mintToken = async (state: StateI) => {
-    if (!publicKey) throw new WalletNotConnectedError();
+    if (!publicKey || !signTransaction) throw new WalletNotConnectedError();
 
     const mintTokenAddress: PublicKey =  new PublicKey(state.mintToken || '');
     const destination: PublicKey = new PublicKey(state.receiver);
     const authorityPublicKey: PublicKey = publicKey;
     const amount = state.amountToSend;
 
-    const keys: Array<AccountMeta> = [
+    const keys = [
+      { pubkey: authorityPublicKey, isSigner: true, isWritable: false },
       { pubkey: mintTokenAddress, isSigner: false, isWritable: true },
-      { pubkey: new PublicKey(state.receiver), isSigner: false, isWritable: true },
-      { pubkey: publicKey, isSigner: true, isWritable: false }
+      { pubkey: destination, isSigner: false, isWritable: true },
     ];
 
     const data = Buffer.alloc(mintToInstructionData.span);
@@ -111,9 +111,7 @@ export const Index = () => {
       new TransactionInstruction({ keys, programId: TOKEN_PROGRAM_ID, data })
     );
 
-    const signature = await sendTransaction(transaction, connection);
-
-    await connection.confirmTransaction(signature);
+    connection.confirmTransaction(await sendTransaction(transaction, connection));
   }
 
   const createToken2 = async () => {
