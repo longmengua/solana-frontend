@@ -8,7 +8,7 @@ export const getTokenAccount = async (p: {
   owner: PublicKey,
   payer: PublicKey,
   sendTransaction: WalletContextState['sendTransaction'],
-}): Promise<Account | void> => {
+}): Promise<Account> => {
     const {
       mint,
       owner,
@@ -61,14 +61,14 @@ export const getTokenAccount = async (p: {
                 // instruction error if the associated account exists already.
             }
             // Now this should always succeed
-            // account = await getAccount(connection, newAssociatedToken.publicKey);
+            account = await getAccount(connection, associatedToken);
         } else {
             throw error;
         }
     }
 
-    // if (!account.mint.equals(mint)) throw new TokenInvalidMintError();
-    // if (!account.owner.equals(owner)) throw new TokenInvalidOwnerError();
+    if (!account.mint.equals(mint)) throw new TokenInvalidMintError();
+    if (!account.owner.equals(owner)) throw new TokenInvalidOwnerError();
 
-    // return account;
+    return account;
 }
