@@ -6,7 +6,8 @@ import { WalletNotConnectedError } from '@solana/wallet-adapter-base'
 import { useConnection, useWallet } from '@solana/wallet-adapter-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AccountInfo, Keypair, PublicKey, SystemProgram, Transaction, Connection, clusterApiUrl, TransactionInstruction, AccountMeta, sendAndConfirmTransaction } from '@solana/web3.js'
-import { createInitializeMintInstruction, getMinimumBalanceForRentExemptMint, MINT_SIZE, TOKEN_PROGRAM_ID, getAccount, createMintToInstruction, mintToInstructionData, TokenInstruction, createMint, getMint, Mint, mintTo, getOrCreateAssociatedTokenAccount, transfer } from '@solana/spl-token'
+import { createInitializeMintInstruction, getMinimumBalanceForRentExemptMint, MINT_SIZE, TOKEN_PROGRAM_ID, getAccount, createMintToInstruction, mintToInstructionData, TokenInstruction, createMint, getMint, Mint, mintTo, getOrCreateAssociatedTokenAccount, transfer, createTransferCheckedInstruction, mintToCheckedInstructionData, createMintToCheckedInstruction, getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, TokenAccountNotFoundError, TokenInvalidAccountOwnerError, TokenInvalidMintError, TokenInvalidOwnerError, ASSOCIATED_TOKEN_PROGRAM_ID, Account } from '@solana/spl-token'
+import { getTokenAccount } from '../../../util/getTokenAccount'
 
 interface StateI {
   receiver: string,
@@ -20,13 +21,13 @@ interface StateI {
 
 export const Index = () => {
   const connection = useMemo(() => new Connection(clusterApiUrl('testnet'), 'confirmed'), []);
-  const { publicKey, sendTransaction, signTransaction } = useWallet();
+  const { publicKey, sendTransaction, signTransaction, wallet } = useWallet();
   const [state, setState] = useState<StateI>({
     receiver: 'DYVrQ1W2L1njN9irucgZjW95BXPGbiuXw217JpUUsAiY',
     balance: 0,
     amountToSend: 1,
     lamportDecimal: 9,
-    mintToken: '8qqVEBWSJrLUphTSu6CYTtoP3sEjsJXBxqVbmS4atAS5',
+    mintToken: 'J9DzGrbVYbi1GVhGSRFXpfE35hk5fbf32NZLEqV5uNWZ',
     mintTokenInfo: undefined,
     nftMetadata: undefined,
   })
@@ -77,7 +78,7 @@ export const Index = () => {
         )
     );
 
-    const signature = await sendTransaction(transaction, connection);
+    const signature = await sendTransaction(transaction, connection, {signers: [keypair]});
 
     await connection.confirmTransaction(signature);
 
@@ -87,74 +88,32 @@ export const Index = () => {
   const mintToken = async (state: StateI) => {
     if (!publicKey || !signTransaction) throw new WalletNotConnectedError();
 
-    const mintTokenAddress: PublicKey =  new PublicKey(state.mintToken || '');
-    const destination: PublicKey = new PublicKey(state.receiver);
-    const authorityPublicKey: PublicKey = publicKey;
-    const amount = state.amountToSend;
+    const mint: PublicKey =  new PublicKey(state.mintToken || '');
+    const receiver: PublicKey = new PublicKey(state.receiver);
+    const authority: PublicKey = publicKey;
+    const amount: number = state.amountToSend;
 
-    const keys = [
-      { pubkey: authorityPublicKey, isSigner: true, isWritable: false },
-      { pubkey: mintTokenAddress, isSigner: false, isWritable: true },
-      { pubkey: destination, isSigner: false, isWritable: true },
-    ];
-
-    const data = Buffer.alloc(mintToInstructionData.span);
-    mintToInstructionData.encode(
-        {
-            instruction: TokenInstruction.MintTo,
-            amount: BigInt(amount),
-        },
-        data
-    );
-
-    const transaction = new Transaction().add(
-      new TransactionInstruction({ keys, programId: TOKEN_PROGRAM_ID, data })
-    );
-
-    connection.confirmTransaction(await sendTransaction(transaction, connection));
-  }
-
-  const createToken2 = async () => {
-    if (!publicKey) throw new WalletNotConnectedError();
-
-    // '5G5P5sPz77rbszLfXZPvsAch3VJvB1TzcWZKZzpJFuFSuVZWRLbQKMAXTKKoz3XhJ12ETCkrqR1aiVy9n1xDfNhL'
-    const secretKey: Uint8Array = Uint8Array.from(bs58.decode('5G5P5sPz77rbszLfXZPvsAch3VJvB1TzcWZKZzpJFuFSuVZWRLbQKMAXTKKoz3XhJ12ETCkrqR1aiVy9n1xDfNhL'))
-    const payer = Keypair.fromSecretKey(secretKey);
-
-    const mint = await createMint(
+    const TAto = await getTokenAccount({
       connection,
-      payer,
-      publicKey,
-      publicKey,
-      9,
-    );
+      mint,
+      owner: receiver,
+      payer: publicKey,
+      sendTransaction,
+    });
 
-    setState(pre => ({...pre, mintToken: mint.toBase58()}))
-  }
+    // const transaction = new Transaction().add(
+    //   createMintToCheckedInstruction(
+    //     mint, 
+    //     TAto.address,
+    //     authority,
+    //     amount,
+    //     9,
+    //   )
+    // );
 
-  const mintToken2 = async () => {
-    if(!state.mintToken || !publicKey) throw new Error('missing token address');
+    // const signature = await sendTransaction(transaction, connection)
 
-    // '5G5P5sPz77rbszLfXZPvsAch3VJvB1TzcWZKZzpJFuFSuVZWRLbQKMAXTKKoz3XhJ12ETCkrqR1aiVy9n1xDfNhL'
-    const secretKey: Uint8Array = Uint8Array.from(bs58.decode('5G5P5sPz77rbszLfXZPvsAch3VJvB1TzcWZKZzpJFuFSuVZWRLbQKMAXTKKoz3XhJ12ETCkrqR1aiVy9n1xDfNhL'))
-    const payer = Keypair.fromSecretKey(secretKey);
-
-    const tokenAccount = await getOrCreateAssociatedTokenAccount(
-      connection,
-      payer,
-      new PublicKey(state.mintToken),
-      payer.publicKey
-    )
-
-    await mintTo(
-      connection,
-      payer,
-      new PublicKey(state.mintToken),
-      tokenAccount.address,
-      new PublicKey(state.receiver),
-      state.amountToSend,
-      []
-    )
+    // connection.confirmTransaction(signature);
   }
 
   const mintNFTToken = async () => {
@@ -166,18 +125,41 @@ export const Index = () => {
   }
 
   const transferMintToken = async () => {
-    if(!state.mintToken || !publicKey) throw new Error('missing token address');
+    if (!publicKey || !state.mintToken) throw new WalletNotConnectedError();
 
-    const results = await PublicKey.findProgramAddress(
-      [
-        publicKey.toBuffer(),
-        TOKEN_PROGRAM_ID.toBuffer(),
-        new PublicKey(state.mintToken).toBuffer(),
-      ],
-      TOKEN_PROGRAM_ID,
-    );
-    console.log('result', results)
-    debugger;
+    const mint: PublicKey =  new PublicKey(state.mintToken || '');
+    const receiver: PublicKey = new PublicKey(state.receiver);
+    const authorityPublicKey: PublicKey = publicKey;
+    const amount = state.amountToSend;
+
+    const ATAfrom = await getTokenAccount({
+      connection,
+      mint,
+      owner: publicKey,
+      payer: publicKey,
+      sendTransaction,
+    });
+
+    const ATAto = await getTokenAccount({
+      connection,
+      mint,
+      owner: receiver,
+      payer: publicKey,
+      sendTransaction,
+    });
+
+    const transaction = new Transaction().add(
+      createTransferCheckedInstruction(
+        ATAfrom.address,
+        mint,
+        ATAto.address,
+        authorityPublicKey,
+        amount,
+        9
+      )
+    )
+
+    connection.confirmTransaction(await sendTransaction(transaction, connection));
   }
 
   const transferNFTToken2 = async () => {
@@ -269,7 +251,7 @@ export const Index = () => {
       <li>decimals: <>{state.mintTokenInfo?.decimals}</></li>
       <li>freezeAuthority: <>{state.mintTokenInfo?.freezeAuthority?.toBase58()}</></li>
       <li>mintAuthority: <>{state.mintTokenInfo?.mintAuthority?.toBase58()}</></li>
-      <li>supply: <>{state.mintTokenInfo?.supply?.toString()}</></li>
+      <li>supply: <>{state.mintTokenInfo?.supply && parseFloat(state.mintTokenInfo?.supply?.toString() || '0')/(10 ** 9)}</></li>
       <li>isInitialized: <>{JSON.stringify(state.mintTokenInfo?.isInitialized)}</></li>
     </ul>
     <div className={scss.gap} />
@@ -290,8 +272,6 @@ export const Index = () => {
       <button className={scss.button} onClick={() => transferMintToken()}>Transfer mint token</button>
       <button className={scss.button} onClick={() => transferNFTToken()}>Transfer NFT token</button>
       <hr />
-      <button className={scss.button} onClick={() => createToken2()}>Create mint token 2</button>
-      <button className={scss.button} onClick={() => mintToken2()}>Mint token 2</button>
       <button className={scss.button} onClick={() => mintNFTToken()}>Mint NFT Token2</button>
       <button className={scss.button} onClick={() => transferMintToken2()}>Transfer mint token2</button>
     </div>
