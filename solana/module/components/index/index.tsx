@@ -85,65 +85,23 @@ export const Index = () => {
     setState(pre => ({...pre, mintToken: keypair.publicKey.toBase58()}))
   }
 
-  const mintToken = async (state: StateI) => {
-    if (!publicKey || !signTransaction) throw new WalletNotConnectedError();
+  const mintToken = async () => {
+    if(!state.mintToken || !publicKey) throw new Error('missing token address');
 
     const mint: PublicKey =  new PublicKey(state.mintToken || '');
-    const receiver: PublicKey = new PublicKey(state.receiver);
-    const authority: PublicKey = publicKey;
-    const amount: number = state.amountToSend;
 
-    const TAto = await getTokenAccount({
+    const ATAto = await getTokenAccount({
       connection,
       mint,
-      owner: receiver,
+      owner: publicKey,
       payer: publicKey,
       sendTransaction,
     });
 
     const transaction = new Transaction().add(
       createMintToCheckedInstruction(
-        mint, 
-        TAto.address,
-        authority,
-        amount,
-        9,
-      )
-    );
-
-    const signature = await sendTransaction(transaction, connection)
-
-    connection.confirmTransaction(signature);
-  }
-
-  const mintToken2 = async () => {
-    if(!state.mintToken || !publicKey) throw new Error('missing token address');
-
-    // 'TEnkiyuFjp2oKvpuZidCrnJXTB8Pno49bMmqTY2rHL5zPepRRFBpH9JQyTvo86RkVxDAXK2PKrSk1eM1QdbaiCF'
-    const secretKey: Uint8Array = Uint8Array.from(bs58.decode('TEnkiyuFjp2oKvpuZidCrnJXTB8Pno49bMmqTY2rHL5zPepRRFBpH9JQyTvo86RkVxDAXK2PKrSk1eM1QdbaiCF'))
-    const payer = Keypair.fromSecretKey(secretKey);
-
-    const tokenAccount = await getOrCreateAssociatedTokenAccount(
-      connection,
-      payer,
-      new PublicKey(state.mintToken),
-      payer.publicKey
-    )
-
-    // await mintTo(
-    //   connection,
-    //   payer,
-    //   new PublicKey(state.mintToken),
-    //   tokenAccount.address,
-    //   new PublicKey(state.receiver),
-    //   state.amountToSend,
-    //   []
-    // )
-
-    const transaction = new Transaction().add(
-      createMintToCheckedInstruction(
         new PublicKey(state.mintToken),
-        tokenAccount.address,
+        ATAto.address,
         publicKey,
         state.amountToSend * (10 ** 9),
         9,
@@ -304,8 +262,7 @@ export const Index = () => {
     <div style={{ display: 'flex', gap: '5px', flexWrap:'wrap'}}>
       <button disabled={!publicKey} className={scss.button} onClick={() => transferSol(state)}>Transfer Sol</button>
       <button className={scss.button} onClick={() => createToken(state)}>Create mint token</button>
-      <button className={scss.button} onClick={() => mintToken(state)}>Mint token</button>
-      <button className={scss.button} onClick={() => mintToken2()}>Mint token2</button>
+      <button className={scss.button} onClick={() => mintToken()}>Mint token</button>
       <button className={scss.button} onClick={() => mintNFTToken()}>Mint NFT Token</button>
       <hr />
       <button className={scss.button} onClick={() => getSupply()}>Get Mint Token Info</button>
