@@ -33,9 +33,9 @@ export const Index = () => {
   const { publicKey, sendTransaction, signTransaction, wallet } = useWallet();
   const [state, setState] = useState<StateI>({
     mintToken: '',
-    receiver: '4LvF1P1kMrzJj7AJkNm7Q3an89ryR94rccVsJmAijGwG',
-    nftTokenAddress: '7XCtAu8Q8DVa3qgtA54DS17iL4Lwt6EQFTeNpUK3LudM',
-    payerPrivateKey: 'TEnkiyuFjp2oKvpuZidCrnJXTB8Pno49bMmqTY2rHL5zPepRRFBpH9JQyTvo86RkVxDAXK2PKrSk1eM1QdbaiCF',
+    receiver: '',
+    nftTokenAddress: '',
+    payerPrivateKey: '',
     balance: 0,
     lamportDecimal: 9,
     amountToSend: 0,
