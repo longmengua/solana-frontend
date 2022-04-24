@@ -22,7 +22,8 @@ interface StateI {
 }
 
 export const Index = () => {
-  const connection = useMemo(() => new Connection(clusterApiUrl('testnet'), 'confirmed'), []);
+  // const connection = useMemo(() => new Connection(clusterApiUrl('testnet'), 'confirmed'), []);
+  const { connection } = useConnection();
   const { publicKey, sendTransaction, signTransaction, wallet } = useWallet();
   const [state, setState] = useState<StateI>({
     mintToken: '2fs4QpMjbFv1m9rzADwwp2tzKonPnSJB69U4XGjut27T',
