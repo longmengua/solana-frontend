@@ -175,7 +175,7 @@ export const Index = () => {
         0,
       )
     )
-        debugger;
+
     connection.confirmTransaction(await sendTransaction(transaction, connection));
   }
 
