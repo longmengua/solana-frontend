@@ -6,7 +6,7 @@ import { WalletNotConnectedError } from '@solana/wallet-adapter-base'
 import { useConnection, useWallet } from '@solana/wallet-adapter-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AccountInfo, Keypair, PublicKey, SystemProgram, Transaction, Connection, clusterApiUrl, TransactionInstruction, AccountMeta, sendAndConfirmTransaction, TokenAmount, RpcResponseAndContext, ParsedAccountData, Version } from '@solana/web3.js'
-import { createInitializeMintInstruction, getMinimumBalanceForRentExemptMint, MINT_SIZE, TOKEN_PROGRAM_ID, getAccount, createMintToInstruction, mintToInstructionData, TokenInstruction, createMint, getMint, Mint, mintTo, getOrCreateAssociatedTokenAccount, transfer, createTransferCheckedInstruction, mintToCheckedInstructionData, createMintToCheckedInstruction, getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, TokenAccountNotFoundError, TokenInvalidAccountOwnerError, TokenInvalidMintError, TokenInvalidOwnerError, ASSOCIATED_TOKEN_PROGRAM_ID, Account, createSetAuthorityInstruction, AuthorityType } from '@solana/spl-token'
+import { createInitializeMintInstruction, getMinimumBalanceForRentExemptMint, MINT_SIZE, TOKEN_PROGRAM_ID, getAccount, createMintToInstruction, mintToInstructionData, TokenInstruction, createMint, getMint, Mint, mintTo, getOrCreateAssociatedTokenAccount, transfer, createTransferCheckedInstruction, mintToCheckedInstructionData, createMintToCheckedInstruction, getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, TokenAccountNotFoundError, TokenInvalidAccountOwnerError, TokenInvalidMintError, TokenInvalidOwnerError, ASSOCIATED_TOKEN_PROGRAM_ID, Account, createSetAuthorityInstruction, AuthorityType, createTransferInstruction, transferInstructionData } from '@solana/spl-token'
 import { getTokenAccount } from '../../../util/getTokenAccount'
 import { createMintToken } from '../../../util/createMintToken'
 import { mintingMintToken } from '../../../util/mintingMintToken'
@@ -33,9 +33,9 @@ export const Index = () => {
   const { publicKey, sendTransaction, signTransaction, wallet } = useWallet();
   const [state, setState] = useState<StateI>({
     mintToken: '',
-    receiver: '',
-    nftTokenAddress: '',
-    payerPrivateKey: '',
+    receiver: '4LvF1P1kMrzJj7AJkNm7Q3an89ryR94rccVsJmAijGwG',
+    nftTokenAddress: '5Ack8Dt944jH9SsWJtbQHBLqq7ALei4JuotDuRv1DwjG',
+    payerPrivateKey: 'TEnkiyuFjp2oKvpuZidCrnJXTB8Pno49bMmqTY2rHL5zPepRRFBpH9JQyTvo86RkVxDAXK2PKrSk1eM1QdbaiCF',
     balance: 0,
     lamportDecimal: 9,
     amountToSend: 0,
@@ -199,8 +199,6 @@ export const Index = () => {
       receiver,
     )
 
-    debugger;
-
     transfer(
       connection,
       payer,
@@ -209,19 +207,38 @@ export const Index = () => {
       payer,
       1,
     )
+  }
 
-    // const transaction = new Transaction().add(
-    //   createTransferCheckedInstruction(
-    //     ATAfrom.address,
-    //     nft,
-    //     ATAto.address,
-    //     payer.publicKey,
-    //     1,
-    //     0,
-    //   )
-    // )
+  const letClientSendTransaction = async () => {
+    if(!state.payerPrivateKey) throw new Error('missing private key');
 
-    // connection.sendTransaction(transaction, [payer, receiver1]);
+    const secretKey: Uint8Array = Uint8Array.from(bs58.decode(state.payerPrivateKey))
+    const payer = Keypair.fromSecretKey(secretKey);    
+    const nft: PublicKey =  new PublicKey(state.nftTokenAddress || '');
+    const receiver: PublicKey = new PublicKey(state.receiver); 
+
+    const ATAfrom: Account = await getOrCreateAssociatedTokenAccount(
+      connection,
+      payer,
+      nft,
+      payer.publicKey,
+    )
+
+    const ATAto: Account = await getOrCreateAssociatedTokenAccount(
+      connection,
+      payer,
+      nft,
+      receiver,
+    )
+
+    const transaction = new Transaction().add(
+        createTransferInstruction(ATAfrom.address, ATAto.address, payer.publicKey, 1, [payer], TOKEN_PROGRAM_ID)
+    );
+
+    transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+    transaction.sign(payer)
+
+    connection.confirmTransaction(await sendTransaction(transaction, connection));
   }
 
   /************************************************************************************/
@@ -335,6 +352,7 @@ export const Index = () => {
     <div className={scss.gap} />
     <div style={{ display: 'flex', gap: '5px', flexWrap:'wrap'}}>
       <button className={scss.button} onClick={() => transferNFTwithPayer()}>Transfer NFT with payer</button>
+      <button className={scss.button} onClick={() => letClientSendTransaction()}>Let Client Send Transaction</button>
     </div>
   </div>
 }
