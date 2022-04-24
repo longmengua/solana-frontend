@@ -11,13 +11,14 @@ import { getTokenAccount } from '../../../util/getTokenAccount'
 
 interface StateI {
   receiver: string,
-  amountToSend: number,
   lamportDecimal: number,
-  mintToken: string | undefined,
   balance: number,
+  mintToken: string | undefined,
+  amountToSend: number | undefined,
   tokenBalance: TokenAmount | undefined,
   mintTokenInfo: Mint | undefined,
   nftMetadata: any,
+  nftTokenAddress: string | undefined,
 }
 
 export const Index = () => {
@@ -27,11 +28,12 @@ export const Index = () => {
     mintToken: '2fs4QpMjbFv1m9rzADwwp2tzKonPnSJB69U4XGjut27T',
     receiver: '',
     balance: 0,
-    amountToSend: 1,
     lamportDecimal: 9,
+    amountToSend: undefined,
     tokenBalance: undefined,
     mintTokenInfo: undefined,
     nftMetadata: undefined,
+    nftTokenAddress: undefined,
   })
 
   const transferSol = useCallback(async (state: StateI) => {
@@ -52,7 +54,9 @@ export const Index = () => {
       
   }, [publicKey, sendTransaction, connection]);
 
-  const inputLamport = (lamports: number) => setState(pre => ({...pre, amountToSend: lamports}))
+  const inputAmount = (amount: number) => setState(pre => ({...pre, amountToSend: amount}))
+  
+  const inputNFTaddress = (address: string) => setState(pre => ({...pre, nftTokenAddress: address}))
 
   const inputReceiver = (receiver: string) => setState(pre => ({...pre, receiver}))
 
@@ -241,19 +245,27 @@ export const Index = () => {
     <div>Receiver</div>
     <input placeholder='receiver' className={scss.input} type={'text'} value={state.receiver} onInput={e => inputReceiver(e.target.value)}/>
     <div className={scss.gap} />
-    <div>Lamports</div>
-    <input placeholder='lamports' className={scss.input} type={'text'} value={state.amountToSend} onInput={e => inputLamport(e.target.value)}/>
+    <div>Amount</div>
+    <input placeholder='amount' className={scss.input} type={'text'} value={state.amountToSend} onInput={e => inputAmount(e.target.value)}/>
+    <div className={scss.gap} />
+    <div>NFT token address</div>
+    <input placeholder='NFT token address' className={scss.input} type={'text'} value={state.nftTokenAddress} onInput={e => inputNFTaddress(e.target.value)}/>
     <div className={scss.gap} />
     <div style={{ display: 'flex', gap: '5px', flexWrap:'wrap'}}>
       <button disabled={!publicKey} className={scss.button} onClick={() => transferSol(state)}>Transfer Sol</button>
+      <button className={scss.button} onClick={() => transferMintToken()}>Transfer mint token</button>
+      <button className={scss.button} onClick={() => transferNFTToken()}>Transfer NFT token</button>
+    </div>
+    <div className={scss.gap} />
+    <div style={{ display: 'flex', gap: '5px', flexWrap:'wrap'}}>
+      <button className={scss.button} onClick={() => getSupply()}>Get Mint Token Info</button>
+      <button className={scss.button} onClick={() => getMetadata()}>Get NFT Token Info</button>
+    </div>
+    <div className={scss.gap} />
+    <div style={{ display: 'flex', gap: '5px', flexWrap:'wrap'}}>
       <button className={scss.button} onClick={() => createToken(state)}>Create mint token</button>
       <button className={scss.button} onClick={() => mintToken()}>Mint token</button>
       <button className={scss.button} onClick={() => mintNFTToken()}>Mint NFT Token</button>
-      <hr />
-      <button className={scss.button} onClick={() => getSupply()}>Get Mint Token Info</button>
-      <button className={scss.button} onClick={() => getMetadata()}>Get NFT Token Info</button>
-      <button className={scss.button} onClick={() => transferMintToken()}>Transfer mint token</button>
-      <button className={scss.button} onClick={() => transferNFTToken()}>Transfer NFT token</button>
     </div>
   </div>
 }
