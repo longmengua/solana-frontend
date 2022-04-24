@@ -20,14 +20,14 @@ interface StateI {
 }
 
 export const Index = () => {
-  const connection = useMemo(() => new Connection(clusterApiUrl('testnet'), 'confirmed'), []);
+  const connection = useMemo(() => new Connection(clusterApiUrl('devnet'), 'confirmed'), []);
   const { publicKey, sendTransaction, signTransaction, wallet } = useWallet();
   const [state, setState] = useState<StateI>({
-    receiver: 'DYVrQ1W2L1njN9irucgZjW95BXPGbiuXw217JpUUsAiY',
+    receiver: '4LvF1P1kMrzJj7AJkNm7Q3an89ryR94rccVsJmAijGwG',
     balance: 0,
     amountToSend: 1,
     lamportDecimal: 9,
-    mintToken: 'J9DzGrbVYbi1GVhGSRFXpfE35hk5fbf32NZLEqV5uNWZ',
+    mintToken: '4xZ7JbbJBJJYGSL9uwijWsZuAzbxFeRJs2exuBNG5uNL',
     mintTokenInfo: undefined,
     nftMetadata: undefined,
   })
@@ -115,6 +115,46 @@ export const Index = () => {
 
     connection.confirmTransaction(signature);
   }
+
+  const mintToken2 = async () => {
+    if(!state.mintToken || !publicKey) throw new Error('missing token address');
+
+    // 'TEnkiyuFjp2oKvpuZidCrnJXTB8Pno49bMmqTY2rHL5zPepRRFBpH9JQyTvo86RkVxDAXK2PKrSk1eM1QdbaiCF'
+    const secretKey: Uint8Array = Uint8Array.from(bs58.decode('TEnkiyuFjp2oKvpuZidCrnJXTB8Pno49bMmqTY2rHL5zPepRRFBpH9JQyTvo86RkVxDAXK2PKrSk1eM1QdbaiCF'))
+    const payer = Keypair.fromSecretKey(secretKey);
+
+    const tokenAccount = await getOrCreateAssociatedTokenAccount(
+      connection,
+      payer,
+      new PublicKey(state.mintToken),
+      payer.publicKey
+    )
+
+    // await mintTo(
+    //   connection,
+    //   payer,
+    //   new PublicKey(state.mintToken),
+    //   tokenAccount.address,
+    //   new PublicKey(state.receiver),
+    //   state.amountToSend,
+    //   []
+    // )
+
+    const transaction = new Transaction().add(
+      createMintToCheckedInstruction(
+        new PublicKey(state.mintToken),
+        tokenAccount.address,
+        publicKey,
+        state.amountToSend * (10 ** 9),
+        9,
+      )
+    );
+
+    const signature = await sendTransaction(transaction, connection)
+
+    connection.confirmTransaction(signature);
+  }
+
 
   const mintNFTToken = async () => {
 
@@ -251,7 +291,7 @@ export const Index = () => {
       <li>decimals: <>{state.mintTokenInfo?.decimals}</></li>
       <li>freezeAuthority: <>{state.mintTokenInfo?.freezeAuthority?.toBase58()}</></li>
       <li>mintAuthority: <>{state.mintTokenInfo?.mintAuthority?.toBase58()}</></li>
-      <li>supply: <>{state.mintTokenInfo?.supply && parseFloat(state.mintTokenInfo?.supply?.toString() || '0')/(10 ** 9)}</></li>
+      <li>supply: <>{state.mintTokenInfo?.supply && (state.mintTokenInfo?.supply / BigInt(10 ** 9)).toString()}</></li>
       <li>isInitialized: <>{JSON.stringify(state.mintTokenInfo?.isInitialized)}</></li>
     </ul>
     <div className={scss.gap} />
@@ -265,6 +305,7 @@ export const Index = () => {
       <button disabled={!publicKey} className={scss.button} onClick={() => transferSol(state)}>Transfer Sol</button>
       <button className={scss.button} onClick={() => createToken(state)}>Create mint token</button>
       <button className={scss.button} onClick={() => mintToken(state)}>Mint token</button>
+      <button className={scss.button} onClick={() => mintToken2()}>Mint token2</button>
       <button className={scss.button} onClick={() => mintNFTToken()}>Mint NFT Token</button>
       <hr />
       <button className={scss.button} onClick={() => getSupply()}>Get Mint Token Info</button>
