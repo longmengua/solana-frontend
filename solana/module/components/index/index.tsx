@@ -101,19 +101,19 @@ export const Index = () => {
       sendTransaction,
     });
 
-    // const transaction = new Transaction().add(
-    //   createMintToCheckedInstruction(
-    //     mint, 
-    //     TAto.address,
-    //     authority,
-    //     amount,
-    //     9,
-    //   )
-    // );
+    const transaction = new Transaction().add(
+      createMintToCheckedInstruction(
+        mint, 
+        TAto.address,
+        authority,
+        amount,
+        9,
+      )
+    );
 
-    // const signature = await sendTransaction(transaction, connection)
+    const signature = await sendTransaction(transaction, connection)
 
-    // connection.confirmTransaction(signature);
+    connection.confirmTransaction(signature);
   }
 
   const mintNFTToken = async () => {
