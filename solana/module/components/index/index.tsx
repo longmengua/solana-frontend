@@ -5,19 +5,20 @@ import { WalletDisconnectButton, WalletMultiButton } from '@solana/wallet-adapte
 import { WalletNotConnectedError } from '@solana/wallet-adapter-base'
 import { useConnection, useWallet } from '@solana/wallet-adapter-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { AccountInfo, Keypair, PublicKey, SystemProgram, Transaction, Connection, clusterApiUrl, TransactionInstruction, AccountMeta, sendAndConfirmTransaction, TokenAmount, RpcResponseAndContext, ParsedAccountData } from '@solana/web3.js'
-import { createInitializeMintInstruction, getMinimumBalanceForRentExemptMint, MINT_SIZE, TOKEN_PROGRAM_ID, getAccount, createMintToInstruction, mintToInstructionData, TokenInstruction, createMint, getMint, Mint, mintTo, getOrCreateAssociatedTokenAccount, transfer, createTransferCheckedInstruction, mintToCheckedInstructionData, createMintToCheckedInstruction, getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, TokenAccountNotFoundError, TokenInvalidAccountOwnerError, TokenInvalidMintError, TokenInvalidOwnerError, ASSOCIATED_TOKEN_PROGRAM_ID, Account } from '@solana/spl-token'
+import { AccountInfo, Keypair, PublicKey, SystemProgram, Transaction, Connection, clusterApiUrl, TransactionInstruction, AccountMeta, sendAndConfirmTransaction, TokenAmount, RpcResponseAndContext, ParsedAccountData, Version } from '@solana/web3.js'
+import { createInitializeMintInstruction, getMinimumBalanceForRentExemptMint, MINT_SIZE, TOKEN_PROGRAM_ID, getAccount, createMintToInstruction, mintToInstructionData, TokenInstruction, createMint, getMint, Mint, mintTo, getOrCreateAssociatedTokenAccount, transfer, createTransferCheckedInstruction, mintToCheckedInstructionData, createMintToCheckedInstruction, getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, TokenAccountNotFoundError, TokenInvalidAccountOwnerError, TokenInvalidMintError, TokenInvalidOwnerError, ASSOCIATED_TOKEN_PROGRAM_ID, Account, createSetAuthorityInstruction, AuthorityType } from '@solana/spl-token'
 import { getTokenAccount } from '../../../util/getTokenAccount'
 
 interface StateI {
   receiver: string,
   lamportDecimal: number,
   balance: number,
-  mintToken: string | undefined,
   amountToSend: number,
+  nftMetadata: any,
+  version: any,
+  mintToken: string | undefined,
   tokenBalance: TokenAmount | undefined,
   mintTokenInfo: Mint | undefined,
-  nftMetadata: any,
   nftTokenAddress: string | undefined,
 }
 
@@ -26,15 +27,16 @@ export const Index = () => {
   const { connection } = useConnection();
   const { publicKey, sendTransaction, signTransaction, wallet } = useWallet();
   const [state, setState] = useState<StateI>({
-    mintToken: '2fs4QpMjbFv1m9rzADwwp2tzKonPnSJB69U4XGjut27T',
-    receiver: '4LvF1P1kMrzJj7AJkNm7Q3an89ryR94rccVsJmAijGwG',
+    mintToken: '',
+    receiver: '3tCyRdGnB6fMtQf3oWmaq4XvKrrnbsrExbLTjzBbcpmm',
+    nftTokenAddress: '9owAEBbJhdfzUa3Z6QQBP88GRErUM8wR86y1gAvCUFbQ',
     balance: 0,
     lamportDecimal: 9,
     amountToSend: 0,
     tokenBalance: undefined,
     mintTokenInfo: undefined,
     nftMetadata: undefined,
-    nftTokenAddress: undefined,
+    version: undefined,
   })
 
   const transferSol = useCallback(async (state: StateI) => {
@@ -127,7 +129,54 @@ export const Index = () => {
   }
 
   const transferNFTToken = async () => {
-    
+    if (!publicKey || !state.nftTokenAddress) throw new WalletNotConnectedError();
+
+    const nft: PublicKey =  new PublicKey(state.nftTokenAddress || '');
+    const receiver: PublicKey = new PublicKey(state.receiver);
+    const authorityPublicKey: PublicKey = publicKey;
+
+    const ATAfrom = await getTokenAccount({
+      connection,
+      mint: nft,
+      owner: publicKey,
+      payer: publicKey,
+      sendTransaction,
+    });
+
+    const ATAto = await getTokenAccount({
+      connection,
+      mint: nft,
+      owner: receiver,
+      payer: publicKey,
+      sendTransaction,
+    });
+
+    /**
+     * Construct a TransferChecked instruction
+     *
+     * @param source       Source account
+     * @param mint         Mint account
+     * @param destination  Destination account
+     * @param owner        Owner of the source account
+     * @param amount       Number of tokens to transfer
+     * @param decimals     Number of decimals in transfer amount
+     * @param multiSigners Signing accounts if `owner` is a multisig
+     * @param programId    SPL Token program account
+     *
+     * @return Instruction to add to a transaction
+     */
+    const transaction = new Transaction().add(
+      createTransferCheckedInstruction(
+        ATAfrom.address,
+        nft,
+        ATAto.address,
+        authorityPublicKey,
+        1,
+        0,
+      )
+    )
+        debugger;
+    connection.confirmTransaction(await sendTransaction(transaction, connection));
   }
 
   const transferMintToken = async () => {
@@ -233,7 +282,7 @@ export const Index = () => {
     <div className={scss.wallet}>{state.balance} Sol</div>
     <div className={scss.gap} />
     <div>Mint token balance</div>
-    <div className={scss.wallet}>{state.tokenBalance?.uiAmountString}</div>
+    <div className={scss.wallet}>{state.tokenBalance?.uiAmountString || '-'}</div>
     <div className={scss.gap} />
     <div>Mint Token</div>
     <div className={scss.wallet}>{state.mintToken || '-'}</div>
