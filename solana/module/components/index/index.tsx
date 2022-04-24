@@ -8,8 +8,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AccountInfo, Keypair, PublicKey, SystemProgram, Transaction, Connection, clusterApiUrl, TransactionInstruction, AccountMeta, sendAndConfirmTransaction, TokenAmount, RpcResponseAndContext, ParsedAccountData, Version } from '@solana/web3.js'
 import { createInitializeMintInstruction, getMinimumBalanceForRentExemptMint, MINT_SIZE, TOKEN_PROGRAM_ID, getAccount, createMintToInstruction, mintToInstructionData, TokenInstruction, createMint, getMint, Mint, mintTo, getOrCreateAssociatedTokenAccount, transfer, createTransferCheckedInstruction, mintToCheckedInstructionData, createMintToCheckedInstruction, getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, TokenAccountNotFoundError, TokenInvalidAccountOwnerError, TokenInvalidMintError, TokenInvalidOwnerError, ASSOCIATED_TOKEN_PROGRAM_ID, Account, createSetAuthorityInstruction, AuthorityType } from '@solana/spl-token'
 import { getTokenAccount } from '../../../util/getTokenAccount'
+import { createMintToken } from '../../../util/createMintToken'
+import { mintingMintToken } from '../../../util/mintingMintToken'
+import { getTokenInfo } from '../../../util/getTokenInfo'
+import { getTokenBalance } from '../../../util/getTokenBalance'
 
-interface StateI {
+export interface StateI {
   receiver: string,
   lamportDecimal: number,
   balance: number,
@@ -53,8 +57,6 @@ export const Index = () => {
       const signature = await sendTransaction(transaction, connection);
 
       await connection.confirmTransaction(signature);
-
-      
   }, [publicKey, sendTransaction, connection]);
 
   const inputAmount = (amount: number) => setState(pre => ({...pre, amountToSend: amount}))
@@ -63,64 +65,16 @@ export const Index = () => {
 
   const inputReceiver = (receiver: string) => setState(pre => ({...pre, receiver}))
 
-  const createToken = async (state: StateI) => {
+  const createToken = async () => {
     if (!publicKey) throw new WalletNotConnectedError();
-
-    const lamports = await getMinimumBalanceForRentExemptMint(connection);
-    const keypair = Keypair.generate();
-    const decimals = 9;
-
-    const transaction = new Transaction().add(
-        SystemProgram.createAccount({
-            fromPubkey: publicKey,
-            newAccountPubkey: keypair.publicKey,
-            space: MINT_SIZE,
-            lamports: lamports,
-            programId: TOKEN_PROGRAM_ID,
-        }),
-        createInitializeMintInstruction(
-          keypair.publicKey, 
-          decimals, 
-          publicKey, 
-          publicKey, 
-          TOKEN_PROGRAM_ID,
-        )
-    );
-
-    const signature = await sendTransaction(transaction, connection, {signers: [keypair]});
-
-    await connection.confirmTransaction(signature);
-
-    setState(pre => ({...pre, mintToken: keypair.publicKey.toBase58()}))
+    const address: string = await createMintToken({connection, publicKey, sendTransaction, state});
+    setState(pre => ({...pre, mintToken: address}))
   }
 
   const mintToken = async () => {
-    if(!state.mintToken || !publicKey) throw new Error('missing token address');
+    if (!publicKey) throw new WalletNotConnectedError();
 
-    const mint: PublicKey =  new PublicKey(state.mintToken || '');
-    const receiver: PublicKey =  new PublicKey(state.receiver || '');
-
-    const ATAto = await getTokenAccount({
-      connection,
-      mint,
-      owner: receiver,
-      payer: publicKey,
-      sendTransaction,
-    });
-
-    const transaction = new Transaction().add(
-      createMintToCheckedInstruction(
-        mint,
-        ATAto.address,
-        publicKey,
-        state.amountToSend * (10 ** 9),
-        9,
-      )
-    );
-
-    const signature = await sendTransaction(transaction, connection)
-
-    connection.confirmTransaction(signature);
+    await mintingMintToken({connection, publicKey, sendTransaction, state});
   }
 
 
@@ -217,6 +171,14 @@ export const Index = () => {
     connection.confirmTransaction(await sendTransaction(transaction, connection));
   }
 
+  /************************************************************************************/
+  
+  const transferNFTwithPayer = async () => {
+    
+  }
+
+  /************************************************************************************/
+
   const getMetadata = async () => {
     if (!publicKey) throw new WalletNotConnectedError();
 
@@ -239,24 +201,12 @@ export const Index = () => {
   const getSupply = async () => {
     if(!state.mintToken) throw new Error('missing token address')
 
-    const mint = new PublicKey(state.mintToken)
-    const mintInfo: Mint = await getMint(
-      connection,
-      mint,
-    )
+    const mintInfo: Mint = await getTokenInfo({connection, sendTransaction, state});
  
-    let tokenBalance: TokenAmount
+    let tokenBalance: TokenAmount | undefined = undefined;
+    
     if(publicKey){
-      const ATA = await getTokenAccount({
-        connection,
-        mint,
-        owner: publicKey,
-        payer: publicKey,
-        sendTransaction,
-      });
-      const result: RpcResponseAndContext<TokenAmount> = await connection.getTokenAccountBalance(ATA.address)
-      tokenBalance = result.value;
-      // console.log('tokenBalance', tokenBalance);
+      tokenBalance = await getTokenBalance({connection, publicKey, sendTransaction, state});
     }
 
     setState(pre => ({...pre, mintTokenInfo: mintInfo, tokenBalance}))
@@ -328,7 +278,7 @@ export const Index = () => {
     </div>
     <div className={scss.gap} />
     <div style={{ display: 'flex', gap: '5px', flexWrap:'wrap'}}>
-      <button className={scss.button} onClick={() => createToken(state)}>Create mint token</button>
+      <button className={scss.button} onClick={() => createToken()}>Create mint token</button>
       <button className={scss.button} onClick={() => mintToken()}>Mint token</button>
       <button className={scss.button} onClick={() => mintNFTToken()}>Mint NFT Token</button>
     </div>
