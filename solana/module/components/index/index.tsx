@@ -5,7 +5,7 @@ import { WalletDisconnectButton, WalletMultiButton } from '@solana/wallet-adapte
 import { WalletNotConnectedError } from '@solana/wallet-adapter-base'
 import { useConnection, useWallet } from '@solana/wallet-adapter-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { AccountInfo, Keypair, PublicKey, SystemProgram, Transaction, Connection, clusterApiUrl, TransactionInstruction, AccountMeta, sendAndConfirmTransaction, TokenAmount, RpcResponseAndContext } from '@solana/web3.js'
+import { AccountInfo, Keypair, PublicKey, SystemProgram, Transaction, Connection, clusterApiUrl, TransactionInstruction, AccountMeta, sendAndConfirmTransaction, TokenAmount, RpcResponseAndContext, ParsedAccountData } from '@solana/web3.js'
 import { createInitializeMintInstruction, getMinimumBalanceForRentExemptMint, MINT_SIZE, TOKEN_PROGRAM_ID, getAccount, createMintToInstruction, mintToInstructionData, TokenInstruction, createMint, getMint, Mint, mintTo, getOrCreateAssociatedTokenAccount, transfer, createTransferCheckedInstruction, mintToCheckedInstructionData, createMintToCheckedInstruction, getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, TokenAccountNotFoundError, TokenInvalidAccountOwnerError, TokenInvalidMintError, TokenInvalidOwnerError, ASSOCIATED_TOKEN_PROGRAM_ID, Account } from '@solana/spl-token'
 import { getTokenAccount } from '../../../util/getTokenAccount'
 
@@ -14,7 +14,7 @@ interface StateI {
   lamportDecimal: number,
   balance: number,
   mintToken: string | undefined,
-  amountToSend: number | undefined,
+  amountToSend: number,
   tokenBalance: TokenAmount | undefined,
   mintTokenInfo: Mint | undefined,
   nftMetadata: any,
@@ -27,10 +27,10 @@ export const Index = () => {
   const { publicKey, sendTransaction, signTransaction, wallet } = useWallet();
   const [state, setState] = useState<StateI>({
     mintToken: '2fs4QpMjbFv1m9rzADwwp2tzKonPnSJB69U4XGjut27T',
-    receiver: '',
+    receiver: '4LvF1P1kMrzJj7AJkNm7Q3an89ryR94rccVsJmAijGwG',
     balance: 0,
     lamportDecimal: 9,
-    amountToSend: undefined,
+    amountToSend: 0,
     tokenBalance: undefined,
     mintTokenInfo: undefined,
     nftMetadata: undefined,
@@ -169,7 +169,12 @@ export const Index = () => {
   }
 
   const getMetadata = async () => {
+    if (!publicKey) throw new WalletNotConnectedError();
 
+    const response: RpcResponseAndContext<Array<{pubkey: PublicKey; account: AccountInfo<ParsedAccountData>;}>> = await connection.getParsedTokenAccountsByOwner(publicKey, { programId: TOKEN_PROGRAM_ID });
+    const accounts: Array<{pubkey: PublicKey; account: AccountInfo<ParsedAccountData>;}> = response.value;
+
+    console.log('response', accounts)
   }
 
   const getSupply = async () => {
