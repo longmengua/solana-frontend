@@ -231,12 +231,27 @@ export const Index = () => {
       receiver,
     )
 
-    const transaction = new Transaction().add(
-        createTransferInstruction(ATAfrom.address, ATAto.address, payer.publicKey, 1, [payer], TOKEN_PROGRAM_ID)
+    const keys = [
+      { pubkey: payer.publicKey, isSigner: true, isWritable: false },
+      { pubkey: receiver, isSigner: true, isWritable: false },
+      { pubkey: ATAfrom.address, isSigner: false, isWritable: true },
+      { pubkey: ATAto.address, isSigner: false, isWritable: true },
+    ]
+
+    const data = Buffer.alloc(transferInstructionData.span);
+    transferInstructionData.encode(
+        {
+            instruction: TokenInstruction.Transfer,
+            amount: BigInt(1),
+        },
+        data
     );
 
+    const transaction: Transaction = new Transaction().add(new TransactionInstruction({ keys, programId: TOKEN_PROGRAM_ID, data }));
+
     transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
-    transaction.sign(payer)
+    transaction.feePayer = receiver;
+    transaction.partialSign(payer);
 
     connection.confirmTransaction(await sendTransaction(transaction, connection));
   }
