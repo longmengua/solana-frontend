@@ -3,7 +3,7 @@ import scss from './index.module.scss'
 import bs58 from 'bs58'
 import { WalletDisconnectButton, WalletMultiButton } from '@solana/wallet-adapter-react-ui'
 import { WalletNotConnectedError } from '@solana/wallet-adapter-base'
-import { useConnection, useWallet } from '@solana/wallet-adapter-react'
+import { AnchorWallet, useConnection, useWallet } from '@solana/wallet-adapter-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AccountInfo, Keypair, PublicKey, SystemProgram, Transaction, Connection, clusterApiUrl, TransactionInstruction, AccountMeta, sendAndConfirmTransaction, TokenAmount, RpcResponseAndContext, ParsedAccountData, Version } from '@solana/web3.js'
 import { createInitializeMintInstruction, getMinimumBalanceForRentExemptMint, MINT_SIZE, TOKEN_PROGRAM_ID, getAccount, createMintToInstruction, mintToInstructionData, TokenInstruction, createMint, getMint, Mint, mintTo, getOrCreateAssociatedTokenAccount, transfer, createTransferCheckedInstruction, mintToCheckedInstructionData, createMintToCheckedInstruction, getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, TokenAccountNotFoundError, TokenInvalidAccountOwnerError, TokenInvalidMintError, TokenInvalidOwnerError, ASSOCIATED_TOKEN_PROGRAM_ID, Account, createSetAuthorityInstruction, AuthorityType, createTransferInstruction, transferInstructionData } from '@solana/spl-token'
@@ -12,6 +12,7 @@ import { createMintToken } from '../../../util/createMintToken'
 import { mintingMintToken } from '../../../util/mintingMintToken'
 import { getTokenInfo } from '../../../util/getTokenInfo'
 import { getTokenBalance } from '../../../util/getTokenBalance'
+import { lockNft } from '../../../util/nft'
 
 export interface StateI {
   receiver: string,
@@ -33,9 +34,9 @@ export const Index = () => {
   const { publicKey, sendTransaction, signTransaction, wallet } = useWallet();
   const [state, setState] = useState<StateI>({
     mintToken: '',
-    receiver: '4LvF1P1kMrzJj7AJkNm7Q3an89ryR94rccVsJmAijGwG',
-    nftTokenAddress: '5Ack8Dt944jH9SsWJtbQHBLqq7ALei4JuotDuRv1DwjG',
-    payerPrivateKey: 'TEnkiyuFjp2oKvpuZidCrnJXTB8Pno49bMmqTY2rHL5zPepRRFBpH9JQyTvo86RkVxDAXK2PKrSk1eM1QdbaiCF',
+    receiver: '',
+    nftTokenAddress: '',
+    payerPrivateKey: '',
     balance: 0,
     lamportDecimal: 9,
     amountToSend: 0,
@@ -81,6 +82,23 @@ export const Index = () => {
     await mintingMintToken({connection, publicKey, sendTransaction, state});
   }
 
+  const lockNFTToken = async () => {
+    if (!publicKey || !state.nftTokenAddress) throw new WalletNotConnectedError();
+
+    const nft: PublicKey =  new PublicKey(state.nftTokenAddress || '');
+    const anchorWallet: AnchorWallet = publicKey as unknown as AnchorWallet;
+
+    const ATAfrom = await getTokenAccount({
+      connection,
+      mint: nft,
+      owner: publicKey,
+      payer: publicKey,
+      sendTransaction,
+    });
+
+    const result = await lockNft(connection, anchorWallet, ATAfrom.address);
+    console.log('result', result);
+  }
 
   const mintNFTToken = async () => {
 
@@ -352,6 +370,7 @@ export const Index = () => {
       <button disabled={!publicKey} className={scss.button} onClick={() => transferSol(state)}>Transfer Sol</button>
       <button className={scss.button} onClick={() => transferMintToken()}>Transfer mint token</button>
       <button className={scss.button} onClick={() => transferNFTToken()}>Transfer NFT token</button>
+      <button className={scss.button} onClick={() => lockNFTToken()}>Lock NFT token</button>
     </div>
     <div className={scss.gap} />
     <div style={{ display: 'flex', gap: '5px', flexWrap:'wrap'}}>

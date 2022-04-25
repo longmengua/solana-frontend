@@ -1,0 +1,239 @@
+{
+  "version": "0.1.0",
+  "name": "nft_exchange",
+  "instructions": [
+    {
+      "name": "initialize",
+      "accounts": [
+        {
+          "name": "signer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "configuration",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "nonceConfig",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "lock",
+      "accounts": [
+        {
+          "name": "signer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "nftAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "nftMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "exchangeAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "configuration",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "lockedNftTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "nonceConfig",
+          "type": "u8"
+        },
+        {
+          "name": "nonceExchangeLock",
+          "type": "u8"
+        },
+        {
+          "name": "nonceLocked",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "unlock",
+      "accounts": [
+        {
+          "name": "signer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "nftOwner",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "nftAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "nftMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "exchangeAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "configuration",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "lockedNftTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "nonceConfig",
+          "type": "u8"
+        },
+        {
+          "name": "nonceExchangeLock",
+          "type": "u8"
+        },
+        {
+          "name": "nonceLocked",
+          "type": "u8"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Configuration",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "publicKey"
+          },
+          {
+            "name": "exchangeCount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ExchangeAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "locker",
+            "type": "publicKey"
+          },
+          {
+            "name": "lockedAt",
+            "type": "u64"
+          },
+          {
+            "name": "status",
+            "type": {
+              "defined": "ExchangeStatus"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "types": [
+    {
+      "name": "ExchangeStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Active"
+          },
+          {
+            "name": "Done"
+          },
+          {
+            "name": "Failed"
+          }
+        ]
+      }
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "Unauthorized",
+      "msg": "You do not have sufficient permissions to perform this action."
+    }
+  ],
+  "metadata": {
+    "address": "3aVJtfRnDJqdAxtxu9VE1arfjPSpkrKwAvzBxfgQBodE"
+  }
+}
