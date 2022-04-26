@@ -1,6 +1,6 @@
 import * as anchor from '@project-serum/anchor';
 import { Idl, Program, AnchorProvider } from '@project-serum/anchor';
-import {ConfirmOptions, Connection, PublicKey} from "@solana/web3.js";
+import {ConfirmOptions, Connection, PublicKey, Cluster, clusterApiUrl} from "@solana/web3.js";
 import {AnchorWallet} from "@solana/wallet-adapter-react";
 import {
   getAccount, TOKEN_PROGRAM_ID,
@@ -21,7 +21,7 @@ async function getAnchorProvider(connection: Connection, wallet: AnchorWallet) {
     preflightCommitment: `confirmed`,
   };
   return new AnchorProvider(
-    connection,
+    new Connection(clusterApiUrl('mainnet-beta'), `confirmed`),
     wallet,
     opts.preflightCommitment as unknown as ConfirmOptions,
   );
