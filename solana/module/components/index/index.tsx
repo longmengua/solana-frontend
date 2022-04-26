@@ -36,7 +36,7 @@ export const Index = () => {
   const [state, setState] = useState<StateI>({
     mintToken: '',
     receiver: '',
-    nftTokenAddress: '5Ack8Dt944jH9SsWJtbQHBLqq7ALei4JuotDuRv1DwjG',
+    nftTokenAddress: 'FGFYyen81fGystmGM5MP9LsWVuzCv55sj3zEnN7ReB25',
     payerPrivateKey: '',
     balance: 0,
     lamportDecimal: 9,
@@ -95,7 +95,7 @@ export const Index = () => {
 
     const ATAfrom = await getAssociatedTokenAddress(nft, publicKey);
 
-    const result = await lockNft(connection, anchorWallet, ATAfrom);
+    const result = await lockNft(connection, anchorWallet, ATAfrom, nft);
     console.log('lockNFTToken', result);
   }
 
@@ -111,7 +111,7 @@ export const Index = () => {
 
     const ATAfrom = await getAssociatedTokenAddress(nft, publicKey);
 
-    const result = await unlockNFT(connection, anchorWallet, ATAfrom);
+    const result = await unlockNFT(connection, anchorWallet, ATAfrom, nft);
     console.log('unlockNFTToken', result);
   }
 

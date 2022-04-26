@@ -8,8 +8,8 @@ import {
 export const NFT_EXCHANGE_PROGRAM_IDL = require(`./idl/nft_exchange.json`);
 import {toPublicKey} from "./helper";
 
-const SOLCHICK_NFT_EXCHANGE_PROGRAM_ID = '3aVJtfRnDJqdAxtxu9VE1arfjPSpkrKwAvzBxfgQBodE'; // for dev
-// const SOLCHICK_NFT_EXCHANGE_PROGRAM_ID = 'FmxWd8tXXW12kUQmgZ6cbd9AP4otQx44A5YzRGk3cZPy'; // for live
+// const SOLCHICK_NFT_EXCHANGE_PROGRAM_ID = '3aVJtfRnDJqdAxtxu9VE1arfjPSpkrKwAvzBxfgQBodE'; // for dev
+const SOLCHICK_NFT_EXCHANGE_PROGRAM_ID = 'FmxWd8tXXW12kUQmgZ6cbd9AP4otQx44A5YzRGk3cZPy'; // for live
 
 const EXCHANGE_PDA_SEED = `exchange`;
 const LOCKED_PDA_SEED = `locked`;
@@ -27,7 +27,7 @@ async function getAnchorProvider(connection: Connection, wallet: AnchorWallet) {
   );
 }
 
-export async function lockNft(connection: Connection, wallet: AnchorWallet, nftAccount: PublicKey): Promise<{
+export async function lockNft(connection: Connection, wallet: AnchorWallet, nftAccount: PublicKey, nftAddress: PublicKey): Promise<{
   tx?: string,
   error?: any,
 }> {
@@ -42,10 +42,6 @@ export async function lockNft(connection: Connection, wallet: AnchorWallet, nftA
     programId,
     provider,
   );
-
-  // todo fetch token Account;
-  const tokenAccount = await getAccount(connection, nftAccount);
-  const nftAddress = tokenAccount.mint;
 
   const [exchangePubkey, exchangeBump] =
     await anchor.web3.PublicKey.findProgramAddress(
