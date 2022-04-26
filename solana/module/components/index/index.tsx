@@ -92,15 +92,9 @@ export const Index = () => {
       signAllTransactions,
     };
 
-    const ATAfrom = await getTokenAccount({
-      connection,
-      mint: nft,
-      owner: publicKey,
-      payer: publicKey,
-      sendTransaction,
-    });
+    const ATAfrom = await getAssociatedTokenAddress(nft, publicKey);
 
-    const result = await lockNft(connection, anchorWallet, ATAfrom.address);
+    const result = await lockNft(connection, anchorWallet, ATAfrom);
     console.log('result', result);
   }
 
