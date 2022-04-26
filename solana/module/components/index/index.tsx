@@ -31,11 +31,11 @@ export interface StateI {
 export const Index = () => {
   // const connection = useMemo(() => new Connection(clusterApiUrl('testnet'), 'confirmed'), []);
   const { connection } = useConnection();
-  const { publicKey, sendTransaction, signTransaction, wallet } = useWallet();
+  const { publicKey, sendTransaction, signTransaction, signAllTransactions } = useWallet();
   const [state, setState] = useState<StateI>({
     mintToken: '',
     receiver: '',
-    nftTokenAddress: '',
+    nftTokenAddress: '5Ack8Dt944jH9SsWJtbQHBLqq7ALei4JuotDuRv1DwjG',
     payerPrivateKey: '',
     balance: 0,
     lamportDecimal: 9,
@@ -83,10 +83,14 @@ export const Index = () => {
   }
 
   const lockNFTToken = async () => {
-    if (!publicKey || !state.nftTokenAddress) throw new WalletNotConnectedError();
+    if (!publicKey || !state.nftTokenAddress || !signTransaction || !signAllTransactions) throw new WalletNotConnectedError();
 
     const nft: PublicKey =  new PublicKey(state.nftTokenAddress || '');
-    const anchorWallet: AnchorWallet = publicKey as unknown as AnchorWallet;
+    const anchorWallet: AnchorWallet = {
+      publicKey: publicKey,
+      signTransaction,
+      signAllTransactions,
+    };
 
     const ATAfrom = await getTokenAccount({
       connection,

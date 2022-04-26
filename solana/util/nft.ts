@@ -28,12 +28,13 @@ async function getAnchorProvider(connection: Connection, wallet: AnchorWallet) {
 }
 
 export async function lockNft(connection: Connection, wallet: AnchorWallet, nftAccount: PublicKey) {
-  const provider = await getAnchorProvider(connection, wallet);
   const programIdl = NFT_EXCHANGE_PROGRAM_IDL;
+
+  const provider = await getAnchorProvider(connection, wallet);
   if (!provider) {
     return;
   }
-
+  
   const program = new Program(
     programIdl as unknown as Idl,
     programId,
@@ -72,6 +73,8 @@ export async function lockNft(connection: Connection, wallet: AnchorWallet, nftA
   console.log(`exchangePubkey`, exchangePubkey.toString());
   console.log(`configKey`, configKey.toString());
   console.log(`lockedNftAccountPubkey`, lockedNftAccountPubkey.toString());
+
+  debugger;
 
   try {
     const txId = await program.methods.lock(
