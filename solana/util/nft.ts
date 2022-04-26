@@ -74,8 +74,6 @@ export async function lockNft(connection: Connection, wallet: AnchorWallet, nftA
   console.log(`configKey`, configKey.toString());
   console.log(`lockedNftAccountPubkey`, lockedNftAccountPubkey.toString());
 
-  debugger;
-
   try {
     const txId = await program.methods.lock(
       configNonce,
