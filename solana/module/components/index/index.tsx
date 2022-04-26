@@ -12,7 +12,8 @@ import { createMintToken } from '../../../util/createMintToken'
 import { mintingMintToken } from '../../../util/mintingMintToken'
 import { getTokenInfo } from '../../../util/getTokenInfo'
 import { getTokenBalance } from '../../../util/getTokenBalance'
-import { lockNft } from '../../../util/nft'
+import { lockNft } from '../../../util/lockNFT'
+import { unlockNFT } from '../../../util/unlockNFT'
 
 export interface StateI {
   receiver: string,
@@ -95,7 +96,23 @@ export const Index = () => {
     const ATAfrom = await getAssociatedTokenAddress(nft, publicKey);
 
     const result = await lockNft(connection, anchorWallet, ATAfrom);
-    console.log('result', result);
+    console.log('lockNFTToken', result);
+  }
+
+  const unlockNFTToken = async () => {
+    if (!publicKey || !state.nftTokenAddress || !signTransaction || !signAllTransactions) throw new WalletNotConnectedError();
+
+    const nft: PublicKey =  new PublicKey(state.nftTokenAddress || '');
+    const anchorWallet: AnchorWallet = {
+      publicKey: publicKey,
+      signTransaction,
+      signAllTransactions,
+    };
+
+    const ATAfrom = await getAssociatedTokenAddress(nft, publicKey);
+
+    const result = await unlockNFT(connection, anchorWallet, ATAfrom);
+    console.log('unlockNFTToken', result);
   }
 
   const mintNFTToken = async () => {
@@ -369,6 +386,7 @@ export const Index = () => {
       <button className={scss.button} onClick={() => transferMintToken()}>Transfer mint token</button>
       <button className={scss.button} onClick={() => transferNFTToken()}>Transfer NFT token</button>
       <button className={scss.button} onClick={() => lockNFTToken()}>Lock NFT token</button>
+      <button className={scss.button} onClick={() => unlockNFTToken()}>Lock NFT token</button>
     </div>
     <div className={scss.gap} />
     <div style={{ display: 'flex', gap: '5px', flexWrap:'wrap'}}>

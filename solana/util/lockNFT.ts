@@ -27,13 +27,15 @@ async function getAnchorProvider(connection: Connection, wallet: AnchorWallet) {
   );
 }
 
-export async function lockNft(connection: Connection, wallet: AnchorWallet, nftAccount: PublicKey) {
+export async function lockNft(connection: Connection, wallet: AnchorWallet, nftAccount: PublicKey): Promise<{
+  tx?: string,
+  error?: any,
+}> {
   const programIdl = NFT_EXCHANGE_PROGRAM_IDL;
 
   const provider = await getAnchorProvider(connection, wallet);
-  if (!provider) {
-    return;
-  }
+
+  if (!provider) throw new Error('Missing Anchor Provider')
   
   const program = new Program(
     programIdl as unknown as Idl,
@@ -90,9 +92,8 @@ export async function lockNft(connection: Connection, wallet: AnchorWallet, nftA
       systemProgram: anchor.web3.SystemProgram.programId,
       rent: anchor.web3.SYSVAR_RENT_PUBKEY,
     }).rpc();
-    return { success: true, tx_id: txId }
+    return { tx: txId }
   } catch (e) {
-    console.error(e)
-    return { success: false }
+    return { error: e }
   }
 }
