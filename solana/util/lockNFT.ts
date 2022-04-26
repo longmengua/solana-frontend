@@ -94,6 +94,7 @@ export async function lockNft(connection: Connection, wallet: AnchorWallet, nftA
     }).rpc();
     return { tx: txId }
   } catch (e) {
+    console.error(e)
     return { error: e }
   }
 }

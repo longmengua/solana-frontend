@@ -386,7 +386,7 @@ export const Index = () => {
       <button className={scss.button} onClick={() => transferMintToken()}>Transfer mint token</button>
       <button className={scss.button} onClick={() => transferNFTToken()}>Transfer NFT token</button>
       <button className={scss.button} onClick={() => lockNFTToken()}>Lock NFT token</button>
-      <button className={scss.button} onClick={() => unlockNFTToken()}>Lock NFT token</button>
+      <button className={scss.button} onClick={() => unlockNFTToken()}>Unlock NFT token</button>
     </div>
     <div className={scss.gap} />
     <div style={{ display: 'flex', gap: '5px', flexWrap:'wrap'}}>

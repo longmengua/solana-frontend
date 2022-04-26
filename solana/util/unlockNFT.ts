@@ -94,6 +94,7 @@ export async function unlockNFT(connection: Connection, wallet: AnchorWallet, nf
     }).rpc();
     return { tx: txId }
   } catch (e) {
+    console.error(e)
     return { error: e }
   }
 }
