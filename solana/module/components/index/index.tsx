@@ -14,6 +14,7 @@ import { getTokenInfo } from '../../../util/getTokenInfo'
 import { getTokenBalance } from '../../../util/getTokenBalance'
 import { lockNft } from '../../../util/lockNFT'
 import { unlockNFT } from '../../../util/unlockNFT'
+import { transferSol } from '../../../util/transferSol'
 
 export interface StateI {
   receiver: string,
@@ -28,6 +29,8 @@ export interface StateI {
   nftTokenAddress: string | undefined,
   payerPrivateKey: string | undefined,
 }
+
+const publickeyCatch: Record<string, PublicKey> = {}
 
 export const Index = () => {
   // const connection = useMemo(() => new Connection(clusterApiUrl('testnet'), 'confirmed'), []);
@@ -47,21 +50,7 @@ export const Index = () => {
     version: undefined,
   })
 
-  const transferSol = useCallback(async (state: StateI) => {
-      if (!publicKey) throw new WalletNotConnectedError();
-
-      const transaction = new Transaction().add(
-          SystemProgram.transfer({
-              fromPubkey: publicKey,
-              toPubkey: new PublicKey(state.receiver),
-              lamports: state.amountToSend * 10 ** state.lamportDecimal,
-          })
-      );
-
-      const signature = await sendTransaction(transaction, connection);
-
-      await connection.confirmTransaction(signature);
-  }, [publicKey, sendTransaction, connection]);
+  // *****************************************************************************************
 
   const inputAmount = (amount: number) => setState(pre => ({...pre, amountToSend: amount}))
   
@@ -71,6 +60,28 @@ export const Index = () => {
 
   const inputReceiver = (receiver: string) => setState(pre => ({...pre, receiver}))
 
+  // *****************************************************************************************
+
+  const transfer = useCallback(async (state: StateI) => {
+      if (!publicKey) throw new WalletNotConnectedError();
+
+      let toPubkey = publickeyCatch[state.receiver];
+      let fromPubkey = publicKey;
+
+      if(!toPubkey) {
+        toPubkey = new PublicKey(state.receiver);
+        publickeyCatch[state.receiver] = toPubkey;
+      }
+
+      await transferSol({
+        connection,
+        fromPubkey: fromPubkey,
+        toPubkey: toPubkey,
+        sendTransaction,
+        lamports: state.amountToSend * 10 ** state.lamportDecimal, 
+      });
+  }, [publicKey, sendTransaction, connection]);
+
   const createToken = async () => {
     if (!publicKey) throw new WalletNotConnectedError();
     const address: string = await createMintToken({connection, publicKey, sendTransaction, state});
@@ -79,7 +90,6 @@ export const Index = () => {
 
   const mintToken = async () => {
     if (!publicKey) throw new WalletNotConnectedError();
-
     await mintingMintToken({connection, publicKey, sendTransaction, state});
   }
 
@@ -125,49 +135,6 @@ export const Index = () => {
     const nft: PublicKey =  new PublicKey(state.nftTokenAddress || '');
     const receiver: PublicKey = new PublicKey(state.receiver);
     const authorityPublicKey: PublicKey = publicKey;
-
-    const ATAfrom = await getTokenAccount({
-      connection,
-      mint: nft,
-      owner: publicKey,
-      payer: publicKey,
-      sendTransaction,
-    });
-
-    const ATAto = await getTokenAccount({
-      connection,
-      mint: nft,
-      owner: receiver,
-      payer: publicKey,
-      sendTransaction,
-    });
-
-    /**
-     * Construct a TransferChecked instruction
-     *
-     * @param source       Source account
-     * @param mint         Mint account
-     * @param destination  Destination account
-     * @param owner        Owner of the source account
-     * @param amount       Number of tokens to transfer
-     * @param decimals     Number of decimals in transfer amount
-     * @param multiSigners Signing accounts if `owner` is a multisig
-     * @param programId    SPL Token program account
-     *
-     * @return Instruction to add to a transaction
-     */
-    const transaction = new Transaction().add(
-      createTransferCheckedInstruction(
-        ATAfrom.address,
-        nft,
-        ATAto.address,
-        authorityPublicKey,
-        1,
-        0,
-      )
-    )
-
-    connection.confirmTransaction(await sendTransaction(transaction, connection));
   }
 
   const transferMintToken = async () => {
@@ -382,7 +349,7 @@ export const Index = () => {
     <input placeholder='Payer private key' className={scss.input} type={'text'} value={state.payerPrivateKey} onInput={e => inputPayerPrivateKey(e.target.value)}/>
     <div className={scss.gap} />
     <div style={{ display: 'flex', gap: '5px', flexWrap:'wrap'}}>
-      <button disabled={!publicKey} className={scss.button} onClick={() => transferSol(state)}>Transfer Sol</button>
+      <button disabled={!publicKey} className={scss.button} onClick={() => transfer(state)}>Transfer Sol</button>
       <button className={scss.button} onClick={() => transferMintToken()}>Transfer mint token</button>
       <button className={scss.button} onClick={() => transferNFTToken()}>Transfer NFT token</button>
       <button className={scss.button} onClick={() => lockNFTToken()}>Lock NFT token</button>
