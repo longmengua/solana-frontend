@@ -1,12 +1,10 @@
 import scss from './index.module.scss'
 
-import bs58 from 'bs58'
 import { WalletDisconnectButton, WalletMultiButton } from '@solana/wallet-adapter-react-ui'
 import { WalletNotConnectedError } from '@solana/wallet-adapter-base'
 import { AnchorWallet, useConnection, useWallet } from '@solana/wallet-adapter-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { AccountInfo, Keypair, PublicKey, SystemProgram, Transaction, Connection, clusterApiUrl, TransactionInstruction, AccountMeta, sendAndConfirmTransaction, TokenAmount, RpcResponseAndContext, ParsedAccountData, Version } from '@solana/web3.js'
-import { createInitializeMintInstruction, getMinimumBalanceForRentExemptMint, MINT_SIZE, TOKEN_PROGRAM_ID, getAccount, createMintToInstruction, mintToInstructionData, TokenInstruction, createMint, getMint, Mint, mintTo, getOrCreateAssociatedTokenAccount, transfer, createTransferCheckedInstruction, mintToCheckedInstructionData, createMintToCheckedInstruction, getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, TokenAccountNotFoundError, TokenInvalidAccountOwnerError, TokenInvalidMintError, TokenInvalidOwnerError, ASSOCIATED_TOKEN_PROGRAM_ID, Account, createSetAuthorityInstruction, AuthorityType, createTransferInstruction, transferInstructionData } from '@solana/spl-token'
+import { PublicKey, Transaction, TokenAmount, Connection, clusterApiUrl, Cluster} from '@solana/web3.js'
 import { getTokenAccount } from '../../../util/getTokenAccount'
 import { createMintToken } from '../../../util/createMintToken'
 import { mintingMintToken } from '../../../util/mintingMintToken'
@@ -15,6 +13,11 @@ import { getTokenBalance } from '../../../util/getTokenBalance'
 import { lockNft } from '../../../util/lockNFT'
 import { unlockNFT } from '../../../util/unlockNFT'
 import { transferSol } from '../../../util/transferSol'
+import { transferNFT } from '../../../util/transferNFT'
+import { transferNFTwithPrivateKey } from '../../../util/transferNFTwithPrivateKey'
+import { Metadata } from '@metaplex-foundation/mpl-token-metadata'
+import { Mint, getAssociatedTokenAddress, createTransferCheckedInstruction } from '@solana/spl-token'
+import ReactJson from 'react-json-view'
 
 export interface StateI {
   receiver: string,
@@ -32,9 +35,10 @@ export interface StateI {
 
 const publickeyCatch: Record<string, PublicKey> = {}
 
+export const NETWROK: Array<Cluster> = ['devnet', 'testnet', 'mainnet-beta']
+
 export const Index = () => {
-  // const connection = useMemo(() => new Connection(clusterApiUrl('testnet'), 'confirmed'), []);
-  const { connection } = useConnection();
+  const connection = useMemo(() => new Connection(clusterApiUrl(NETWROK[2]), 'confirmed'), []);
   const { publicKey, sendTransaction, signTransaction, signAllTransactions } = useWallet();
   const [state, setState] = useState<StateI>({
     mintToken: '',
@@ -62,7 +66,7 @@ export const Index = () => {
 
   // *****************************************************************************************
 
-  const transfer = useCallback(async (state: StateI) => {
+  const transferS = useCallback(async (state: StateI) => {
       if (!publicKey) throw new WalletNotConnectedError();
 
       let toPubkey = publickeyCatch[state.receiver];
@@ -134,7 +138,14 @@ export const Index = () => {
 
     const nft: PublicKey =  new PublicKey(state.nftTokenAddress || '');
     const receiver: PublicKey = new PublicKey(state.receiver);
-    const authorityPublicKey: PublicKey = publicKey;
+
+    transferNFT({
+      from: publicKey,
+      nft: nft,
+      to: receiver,
+      sendTransaction: sendTransaction,
+      connection: connection,
+    })
   }
 
   const transferMintToken = async () => {
@@ -174,107 +185,27 @@ export const Index = () => {
 
     connection.confirmTransaction(await sendTransaction(transaction, connection));
   }
-
-  /************************************************************************************/
   
   const transferNFTwithPayer = async () => {
     if(!state.payerPrivateKey) throw new Error('missing private key');
-
-    const secretKey: Uint8Array = Uint8Array.from(bs58.decode(state.payerPrivateKey))
-    const payer = Keypair.fromSecretKey(secretKey);    
-    const nft: PublicKey =  new PublicKey(state.nftTokenAddress || '');
-    const receiver: PublicKey = new PublicKey(state.receiver); 
-
-    const ATAfrom: Account = await getOrCreateAssociatedTokenAccount(
+    if(!state.nftTokenAddress) throw new Error('missing nft token address');
+    transferNFTwithPrivateKey({
+      privateKey: state.payerPrivateKey,
+      nftTokenAddress: state.nftTokenAddress,
+      receiver: state.receiver,
       connection,
-      payer,
-      nft,
-      payer.publicKey,
-    )
-
-    const ATAto: Account = await getOrCreateAssociatedTokenAccount(
-      connection,
-      payer,
-      nft,
-      receiver,
-    )
-
-    transfer(
-      connection,
-      payer,
-      ATAfrom.address,
-      ATAto.address,
-      payer,
-      1,
-    )
+      sendTransaction,
+    })
   }
 
-  const letClientSendTransaction = async () => {
-    if(!state.payerPrivateKey) throw new Error('missing private key');
-
-    const secretKey: Uint8Array = Uint8Array.from(bs58.decode(state.payerPrivateKey))
-    const payer = Keypair.fromSecretKey(secretKey);    
-    const nft: PublicKey =  new PublicKey(state.nftTokenAddress || '');
-    const receiver: PublicKey = new PublicKey(state.receiver); 
-
-    const ATAfrom: Account = await getOrCreateAssociatedTokenAccount(
-      connection,
-      payer,
-      nft,
-      payer.publicKey,
-    )
-
-    const ATAto: Account = await getOrCreateAssociatedTokenAccount(
-      connection,
-      payer,
-      nft,
-      receiver,
-    )
-
-    const keys = [
-      { pubkey: payer.publicKey, isSigner: true, isWritable: false },
-      { pubkey: receiver, isSigner: true, isWritable: false },
-      { pubkey: ATAfrom.address, isSigner: false, isWritable: true },
-      { pubkey: ATAto.address, isSigner: false, isWritable: true },
-    ]
-
-    const data = Buffer.alloc(transferInstructionData.span);
-    transferInstructionData.encode(
-        {
-            instruction: TokenInstruction.Transfer,
-            amount: BigInt(1),
-        },
-        data
-    );
-
-    const transaction: Transaction = new Transaction().add(new TransactionInstruction({ keys, programId: TOKEN_PROGRAM_ID, data }));
-
-    transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
-    transaction.feePayer = receiver;
-    transaction.partialSign(payer);
-
-    connection.confirmTransaction(await sendTransaction(transaction, connection));
-  }
-
-  /************************************************************************************/
-
-  const getMetadata = async () => {
-    if (!publicKey) throw new WalletNotConnectedError();
-
-    const seed = 'metadata';
-    const nftTokenAddress = 'YYNd7xcEAJumWghGf5UVqzgwefARYST5UDYM6mUsrZN';
-    const metaplexAddress = 'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s';
-
-    const [PDA] = await PublicKey.findProgramAddress(
-      [Buffer.from(seed), new PublicKey(metaplexAddress).toBuffer(), new PublicKey(nftTokenAddress).toBuffer()],
-      new PublicKey(metaplexAddress),
-    );
-
-    const nftMeta = await connection.getAccountInfo(PDA);
-    if(!nftMeta?.data?.buffer) throw new Error('missing data')
-    const data = Buffer.from(nftMeta?.data?.buffer)
-  
-    console.log('nftMeta', data.toString())
+  const getNFTMetadataV2 = async () => {
+    if(!state.nftTokenAddress) throw new Error('missing nft token address');
+    let metadataPDA = await Metadata.getPDA(new PublicKey(state.nftTokenAddress));
+    const tokenmeta = await Metadata.load(connection, metadataPDA);
+    // console.log('connection', connection);
+    // console.log('metadataPDA', metadataPDA.toBase58());
+    // console.log('tokenmeta', tokenmeta);
+    setState(pre => ({...pre, nftMetadata: tokenmeta}))
   }
 
   const getSupply = async () => {
@@ -314,6 +245,43 @@ export const Index = () => {
       </div>
     </div>
     <div className={scss.gap} />
+    <div>Receiver</div>
+    <input placeholder='receiver' className={scss.input} type={'text'} value={state.receiver} onInput={e => inputReceiver(e.target.value)}/>
+    <div className={scss.gap} />
+    <div>Amount</div>
+    <input placeholder='amount' className={scss.input} type={'text'} value={state.amountToSend} onInput={e => inputAmount(e.target.value)}/>
+    <div className={scss.gap} />
+    <div>NFT token address</div>
+    <input placeholder='NFT token address' className={scss.input} type={'text'} value={state.nftTokenAddress} onInput={e => inputNFTaddress(e.target.value)}/>
+    <div className={scss.gap} />
+    <div>Payer private key</div>
+    <input placeholder='Payer private key' className={scss.input} type={'text'} value={state.payerPrivateKey} onInput={e => inputPayerPrivateKey(e.target.value)}/>
+    <div className={scss.gap} />
+    <div style={{ display: 'flex', gap: '5px', flexWrap:'wrap'}}>
+      <button disabled={!publicKey} className={scss.button} onClick={() => transferS(state)}>Transfer Sol</button>
+      <button className={scss.button} onClick={() => transferMintToken()}>Transfer mint token</button>
+      <button className={scss.button} onClick={() => transferNFTToken()}>Transfer NFT token</button>
+      <button className={scss.button} onClick={() => lockNFTToken()}>Lock NFT token</button>
+      <button className={scss.button} onClick={() => unlockNFTToken()}>Unlock NFT token</button>
+    </div>
+    <div className={scss.gap} />
+    <div style={{ display: 'flex', gap: '5px', flexWrap:'wrap'}}>
+      <button className={scss.button} onClick={() => getSupply()}>Get Mint Token Info</button>
+      <button className={scss.button} onClick={() => getNFTMetadataV2()}>Get NFT Token Info</button>
+    </div>
+    <div className={scss.gap} />
+    <div style={{ display: 'flex', gap: '5px', flexWrap:'wrap'}}>
+      <button className={scss.button} onClick={() => createToken()}>Create mint token</button>
+      <button className={scss.button} onClick={() => mintToken()}>Mint token</button>
+      <button className={scss.button} onClick={() => mintNFTToken()}>Mint NFT Token</button>
+    </div>
+    <div className={scss.gap} />
+    <div style={{ display: 'flex', gap: '5px', flexWrap:'wrap'}}>
+      <button className={scss.button} onClick={() => transferNFTwithPayer()}>Transfer NFT with payer</button>
+      {/* <button className={scss.button} onClick={() => letClientSendTransaction()}>Let Client Send Transaction</button> */}
+    </div>
+
+    <div className={scss.gap} />
     <div>Wallet</div>
     <div className={scss.wallet}>{publicKey?.toBase58()}</div>
     <div className={scss.gap} />
@@ -335,41 +303,10 @@ export const Index = () => {
       <li>supply: <>{state.mintTokenInfo ? (state.mintTokenInfo?.supply / BigInt(10 ** 9))?.toString() || '0' : ''}</></li>
       <li>isInitialized: <>{JSON.stringify(state.mintTokenInfo?.isInitialized)}</></li>
     </ul>
-    <div className={scss.gap} />
-    <div>Receiver</div>
-    <input placeholder='receiver' className={scss.input} type={'text'} value={state.receiver} onInput={e => inputReceiver(e.target.value)}/>
-    <div className={scss.gap} />
-    <div>Amount</div>
-    <input placeholder='amount' className={scss.input} type={'text'} value={state.amountToSend} onInput={e => inputAmount(e.target.value)}/>
-    <div className={scss.gap} />
-    <div>NFT token address</div>
-    <input placeholder='NFT token address' className={scss.input} type={'text'} value={state.nftTokenAddress} onInput={e => inputNFTaddress(e.target.value)}/>
-    <div className={scss.gap} />
-    <div>Payer private key</div>
-    <input placeholder='Payer private key' className={scss.input} type={'text'} value={state.payerPrivateKey} onInput={e => inputPayerPrivateKey(e.target.value)}/>
-    <div className={scss.gap} />
-    <div style={{ display: 'flex', gap: '5px', flexWrap:'wrap'}}>
-      <button disabled={!publicKey} className={scss.button} onClick={() => transfer(state)}>Transfer Sol</button>
-      <button className={scss.button} onClick={() => transferMintToken()}>Transfer mint token</button>
-      <button className={scss.button} onClick={() => transferNFTToken()}>Transfer NFT token</button>
-      <button className={scss.button} onClick={() => lockNFTToken()}>Lock NFT token</button>
-      <button className={scss.button} onClick={() => unlockNFTToken()}>Unlock NFT token</button>
-    </div>
-    <div className={scss.gap} />
-    <div style={{ display: 'flex', gap: '5px', flexWrap:'wrap'}}>
-      <button className={scss.button} onClick={() => getSupply()}>Get Mint Token Info</button>
-      <button className={scss.button} onClick={() => getMetadata()}>Get NFT Token Info</button>
-    </div>
-    <div className={scss.gap} />
-    <div style={{ display: 'flex', gap: '5px', flexWrap:'wrap'}}>
-      <button className={scss.button} onClick={() => createToken()}>Create mint token</button>
-      <button className={scss.button} onClick={() => mintToken()}>Mint token</button>
-      <button className={scss.button} onClick={() => mintNFTToken()}>Mint NFT Token</button>
-    </div>
-    <div className={scss.gap} />
-    <div style={{ display: 'flex', gap: '5px', flexWrap:'wrap'}}>
-      <button className={scss.button} onClick={() => transferNFTwithPayer()}>Transfer NFT with payer</button>
-      <button className={scss.button} onClick={() => letClientSendTransaction()}>Let Client Send Transaction</button>
-    </div>
+    <div>NFT MEtadata</div>
+    <ul>
+      <li>PDA: <>{state.nftMetadata?.pubkey?.toBase58()}</></li>
+      <li><ReactJson src={state.nftMetadata} indentWidth={2} collapsed={true}/></li>
+    </ul>
   </div>
 }
