@@ -18,6 +18,8 @@ import { transferNFTwithPrivateKey } from '../../../util/transferNFTwithPrivateK
 import { Metadata } from '@metaplex-foundation/mpl-token-metadata'
 import { Mint, getAssociatedTokenAddress, createTransferCheckedInstruction } from '@solana/spl-token'
 import ReactJson from 'react-json-view'
+import { burnMintToken } from '../../../util/burnToken'
+import { getBurntTokenBalance } from '../../../util/getBurntTokenBalance'
 
 export interface StateI {
   receiver: string,
@@ -28,6 +30,7 @@ export interface StateI {
   version: any,
   mintToken: string | undefined,
   tokenBalance: TokenAmount | undefined,
+  tokenBurntBalance: TokenAmount | undefined,
   mintTokenInfo: Mint | undefined,
   nftTokenAddress: string | undefined,
   payerPrivateKey: string | undefined,
@@ -38,10 +41,10 @@ const publickeyCatch: Record<string, PublicKey> = {}
 export const NETWROK: Array<Cluster> = ['devnet', 'testnet', 'mainnet-beta']
 
 export const Index = () => {
-  const connection = useMemo(() => new Connection(clusterApiUrl(NETWROK[2]), 'confirmed'), []);
+  const connection = useMemo(() => new Connection(clusterApiUrl(NETWROK[1]), 'confirmed'), []);
   const { publicKey, sendTransaction, signTransaction, signAllTransactions } = useWallet();
   const [state, setState] = useState<StateI>({
-    mintToken: '',
+    mintToken: '9rJNcznp8UeEoapY2gRyetmHKkTDfXnNqZqfs8P9dSeY',
     receiver: '',
     nftTokenAddress: 'FGFYyen81fGystmGM5MP9LsWVuzCv55sj3zEnN7ReB25',
     payerPrivateKey: '',
@@ -49,6 +52,7 @@ export const Index = () => {
     lamportDecimal: 9,
     amountToSend: 0,
     tokenBalance: undefined,
+    tokenBurntBalance: undefined,
     mintTokenInfo: undefined,
     nftMetadata: undefined,
     version: undefined,
@@ -95,6 +99,11 @@ export const Index = () => {
   const mintToken = async () => {
     if (!publicKey) throw new WalletNotConnectedError();
     await mintingMintToken({connection, publicKey, sendTransaction, state});
+  }
+
+  const burnToken = async () => {
+    if (!publicKey) throw new WalletNotConnectedError();
+    await burnMintToken({connection, publicKey, sendTransaction, state});
   }
 
   const lockNFTToken = async () => {
@@ -214,12 +223,16 @@ export const Index = () => {
     const mintInfo: Mint = await getTokenInfo({connection, sendTransaction, state});
  
     let tokenBalance: TokenAmount | undefined = undefined;
+    let tokenBurntBalance: TokenAmount | undefined = undefined;
+
+    console.log('mintInfo', mintInfo);
     
     if(publicKey){
       tokenBalance = await getTokenBalance({connection, publicKey, sendTransaction, state});
+      tokenBurntBalance = await getBurntTokenBalance({connection, publicKey, sendTransaction, state});
     }
 
-    setState(pre => ({...pre, mintTokenInfo: mintInfo, tokenBalance}))
+    setState(pre => ({...pre, mintTokenInfo: mintInfo, tokenBalance, tokenBurntBalance}))
   }
 
   const getBalacne = useCallback(async () => {
@@ -273,6 +286,7 @@ export const Index = () => {
     <div style={{ display: 'flex', gap: '5px', flexWrap:'wrap'}}>
       <button className={scss.button} onClick={() => createToken()}>Create mint token</button>
       <button className={scss.button} onClick={() => mintToken()}>Mint token</button>
+      <button className={scss.button} onClick={() => burnToken()}>Burn token</button>
       <button className={scss.button} onClick={() => mintNFTToken()}>Mint NFT Token</button>
     </div>
     <div className={scss.gap} />
@@ -288,6 +302,8 @@ export const Index = () => {
     <div>Lamports</div>
     <div className={scss.wallet}>{state.balance} Sol</div>
     <div className={scss.gap} />
+    <div>Burnt token balance</div>
+    <div className={scss.wallet}>{state.tokenBalance?.uiAmountString || '-'}</div>
     <div>Mint token balance</div>
     <div className={scss.wallet}>{state.tokenBalance?.uiAmountString || '-'}</div>
     <div className={scss.gap} />
@@ -306,7 +322,9 @@ export const Index = () => {
     <div>NFT MEtadata</div>
     <ul>
       <li>PDA: <>{state.nftMetadata?.pubkey?.toBase58()}</></li>
-      <li><ReactJson src={state.nftMetadata} indentWidth={2} collapsed={true}/></li>
+      <li>
+        {JSON.stringify(state.nftMetadata)}
+      </li>
     </ul>
   </div>
 }

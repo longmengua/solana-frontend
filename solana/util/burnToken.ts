@@ -1,10 +1,11 @@
-import { createMintToCheckedInstruction } from "@solana/spl-token";
+import { createBurnCheckedInstruction, createBurnInstruction } from "@solana/spl-token";
 import { WalletContextState } from "@solana/wallet-adapter-react";
 import { PublicKey, Connection, Transaction } from "@solana/web3.js";
 import { StateI } from "../module/components/index";
 import { getTokenAccount } from "./getTokenAccount";
 
-export const mintingMintToken = async (p: {
+
+export const burnMintToken = async (p: {
   state: StateI, 
   publicKey: PublicKey, 
   connection: Connection, 
@@ -29,9 +30,9 @@ export const mintingMintToken = async (p: {
   });
 
   const transaction = new Transaction().add(
-    createMintToCheckedInstruction(
-      mint,
+    createBurnCheckedInstruction(
       ATAto.address,
+      mint,
       publicKey,
       state.amountToSend * (10 ** 9),
       9,
